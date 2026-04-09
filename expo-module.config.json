@@ -1,0 +1,9 @@
+{
+  "platforms": ["apple", "android", "web"],
+  "apple": {
+    "modules": ["ReactNativeBleAdvertiserModule"]
+  },
+  "android": {
+    "modules": ["app.comapeo.bleadvertiser.ReactNativeBleAdvertiserModule"]
+  }
+}
