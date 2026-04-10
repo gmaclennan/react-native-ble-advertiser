@@ -1,0 +1,42 @@
+# Smoke test: verifies the native module loads, permissions work, and the
+# GATT server starts without crashing.
+#
+# Prerequisites:
+#   - Run on a real Android device with Bluetooth (not an emulator).
+#   - Build and install the example app first:
+#       cd example && npx expo run:android
+#   - Then run:
+#       maestro test .maestro/smoke-test.yaml
+appId: app.comapeo.bleadvertiser.example
+---
+- launchApp:
+    clearState: true
+
+# Start screen renders — proves native module loaded
+- assertVisible: "BLE Advertiser"
+
+# Enter a name and proceed
+- tapOn: "Your name"
+- inputText: "smoke"
+- hideKeyboard
+- tapOn: "Start"
+
+# Handle the Bluetooth permission dialog.
+# Android 12+ shows a single "Nearby devices" dialog for the grouped
+# BLUETOOTH_ADVERTISE / BLUETOOTH_SCAN / BLUETOOTH_CONNECT permissions.
+- runFlow:
+    when:
+      visible: "Allow"
+    commands:
+      - tapOn: "Allow"
+
+# Discovery screen loaded — permissions succeeded, advertising + GATT server
+# initialisation ran without crashing.
+- assertVisible:
+    text: "Discovery"
+    timeout: 10000
+
+# GATT server started and the service was registered successfully.
+- assertVisible:
+    text: "GATT Server: running"
+    timeout: 10000

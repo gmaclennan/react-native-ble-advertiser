@@ -3,6 +3,10 @@ import {
   isSupported,
   startAdvertising,
   stopAdvertising,
+  startGattServer,
+  stopGattServer,
+  addService,
+  addGattServerListener,
 } from "react-native-ble-advertiser";
 import BleManager from "react-native-ble-manager";
 import {
@@ -18,6 +22,7 @@ import {
 } from "react-native";
 
 const SERVICE_UUID = "ed91f27c-4a1c-2e9d-4add-139c1075b442";
+const CHAR_UUID = "ed91f27c-4a1c-2e9d-4add-139c1075b443";
 
 type DiscoveredDevice = {
   id: string;
@@ -135,6 +140,7 @@ function DiscoveryScreen({
   const [devices, setDevices] = useState<DiscoveredDevice[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [started, setStarted] = useState(false);
+  const [gattStatus, setGattStatus] = useState("starting");
   const seenIds = useRef(new Set<string>());
 
   useEffect(() => {
@@ -166,8 +172,27 @@ function DiscoveryScreen({
         await startAdvertising(
           { serviceUuids: [SERVICE_UUID] },
           { manufacturerData: [{ id: 0xffff, data: nameBytes }] },
-          { mode: "lowPower", connectable: false },
+          { mode: "lowPower", connectable: true },
         );
+
+        // Start GATT server so connected centrals can read our name
+        try {
+          await startGattServer();
+          await addService({
+            uuid: SERVICE_UUID,
+            characteristics: [
+              {
+                uuid: CHAR_UUID,
+                properties: ["read", "write", "notify"],
+                permissions: ["read", "write"],
+                value: Array.from(nameBytes),
+              },
+            ],
+          });
+          if (!stopped) setGattStatus("running");
+        } catch (e: any) {
+          if (!stopped) setGattStatus("error: " + e.message);
+        }
 
         await BleManager.start();
 
@@ -198,18 +223,28 @@ function DiscoveryScreen({
       }
     }
 
+    const writeSub = addGattServerListener(
+      "onCharacteristicWriteRequest",
+      (event) => {
+        console.log("GATT write:", event.characteristicUuid, event.value);
+      },
+    );
+
     init();
 
     return () => {
       stopped = true;
       subscription?.remove();
+      writeSub.remove();
       stopAdvertising();
+      stopGattServer();
       BleManager.stopScan();
     };
   }, []);
 
   const handleBack = () => {
     stopAdvertising();
+    stopGattServer();
     BleManager.stopScan();
     onBack();
   };
@@ -225,6 +260,9 @@ function DiscoveryScreen({
           <View style={{ paddingBottom: 8, gap: 4 }}>
             <Text style={{ fontSize: 16 }}>
               {started ? `Broadcasting as "${name}"` : "Starting..."}
+            </Text>
+            <Text style={{ color: "#666" }}>
+              GATT Server: {gattStatus}
             </Text>
             {!isSupported() && (
               <Text style={{ color: "red" }}>
