@@ -92,7 +92,6 @@ class ReactNativeBleAdvertiserModule : Module() {
   // GATT server state
   private var gattServer: BluetoothGattServer? = null
   private val connectedDevices = ConcurrentHashMap<String, BluetoothDevice>()
-  private val requestDevices = ConcurrentHashMap<Int, BluetoothDevice>()
   private val subscribedDevices = ConcurrentHashMap<String, MutableSet<String>>()
   private var addServicePromise: Promise? = null
 
@@ -136,9 +135,13 @@ class ReactNativeBleAdvertiserModule : Module() {
       offset: Int,
       characteristic: BluetoothGattCharacteristic
     ) {
-      requestDevices[requestId] = device
+      val value = characteristic.value ?: ByteArray(0)
+      if (offset > value.size) {
+        gattServer?.sendResponse(device, requestId, BluetoothGatt.GATT_INVALID_OFFSET, offset, null)
+      } else {
+        gattServer?.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, offset, value.copyOfRange(offset, value.size))
+      }
       sendEvent("onCharacteristicReadRequest", mapOf(
-        "requestId" to requestId,
         "deviceAddress" to device.address,
         "serviceUuid" to characteristic.service.uuid.toString(),
         "characteristicUuid" to characteristic.uuid.toString(),
@@ -155,15 +158,18 @@ class ReactNativeBleAdvertiserModule : Module() {
       offset: Int,
       value: ByteArray?
     ) {
-      requestDevices[requestId] = device
+      if (value != null) {
+        characteristic.value = value
+      }
+      if (responseNeeded) {
+        gattServer?.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, 0, null)
+      }
       sendEvent("onCharacteristicWriteRequest", mapOf(
-        "requestId" to requestId,
         "deviceAddress" to device.address,
         "serviceUuid" to characteristic.service.uuid.toString(),
         "characteristicUuid" to characteristic.uuid.toString(),
         "offset" to offset,
-        "value" to (value?.map { it.toInt() and 0xFF } ?: emptyList<Int>()),
-        "responseNeeded" to responseNeeded
+        "value" to (value?.map { it.toInt() and 0xFF } ?: emptyList<Int>())
       ))
     }
 
@@ -394,12 +400,11 @@ class ReactNativeBleAdvertiserModule : Module() {
       }
     }
 
-    @SuppressLint("MissingPermission")
-    Function("sendResponse") { requestId: Int, status: Int, offset: Int, value: List<Int>? ->
+    Function("setCharacteristicValue") { serviceUuid: String, characteristicUuid: String, value: List<Int> ->
       val server = gattServer ?: return@Function
-      val device = requestDevices.remove(requestId) ?: return@Function
-      val bytes = value?.let { ByteArray(it.size) { i -> it[i].toByte() } }
-      server.sendResponse(device, requestId, status, offset, bytes)
+      val service = server.getService(UUID.fromString(serviceUuid)) ?: return@Function
+      val characteristic = service.getCharacteristic(UUID.fromString(characteristicUuid)) ?: return@Function
+      characteristic.value = ByteArray(value.size) { value[it].toByte() }
     }
 
     @SuppressLint("MissingPermission")
@@ -448,7 +453,6 @@ class ReactNativeBleAdvertiserModule : Module() {
     gattServer?.close()
     gattServer = null
     connectedDevices.clear()
-    requestDevices.clear()
     subscribedDevices.clear()
     addServicePromise = null
   }

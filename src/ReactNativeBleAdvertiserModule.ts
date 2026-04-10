@@ -23,11 +23,10 @@ declare class ReactNativeBleAdvertiserModule extends NativeModule<GattServerEven
   stopGattServer(): void;
   addService(service: GattService): Promise<void>;
   removeService(serviceUuid: string): void;
-  sendResponse(
-    requestId: number,
-    status: number,
-    offset: number,
-    value?: number[]
+  setCharacteristicValue(
+    serviceUuid: string,
+    characteristicUuid: string,
+    value: number[]
   ): void;
   notifyCharacteristicChanged(
     serviceUuid: string,

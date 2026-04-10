@@ -75,13 +75,16 @@ export function removeService(serviceUuid: string): void {
   ReactNativeBleAdvertiserModule.removeService(serviceUuid);
 }
 
-export function sendResponse(
-  requestId: number,
-  status: number,
-  offset: number,
-  value?: number[]
+export function setCharacteristicValue(
+  serviceUuid: string,
+  characteristicUuid: string,
+  value: number[]
 ): void {
-  ReactNativeBleAdvertiserModule.sendResponse(requestId, status, offset, value);
+  ReactNativeBleAdvertiserModule.setCharacteristicValue(
+    serviceUuid,
+    characteristicUuid,
+    value
+  );
 }
 
 export function notifyCharacteristicChanged(
@@ -104,13 +107,3 @@ export function addGattServerListener<T extends keyof GattServerEvents>(
 ): EventSubscription {
   return ReactNativeBleAdvertiserModule.addListener(eventName, listener);
 }
-
-export const GATT_SUCCESS = 0x00;
-export const GATT_READ_NOT_PERMITTED = 0x02;
-export const GATT_WRITE_NOT_PERMITTED = 0x03;
-export const GATT_INSUFFICIENT_AUTHENTICATION = 0x05;
-export const GATT_REQUEST_NOT_SUPPORTED = 0x06;
-export const GATT_INVALID_OFFSET = 0x07;
-export const GATT_INVALID_ATTRIBUTE_LENGTH = 0x0d;
-export const GATT_INSUFFICIENT_ENCRYPTION = 0x0f;
-export const GATT_FAILURE = 0x101;

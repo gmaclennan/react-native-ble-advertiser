@@ -64,7 +64,7 @@ public class ReactNativeBleAdvertiserModule: Module {
       // no-op on iOS
     }
 
-    Function("sendResponse") { (requestId: Int, status: Int, offset: Int, value: [Int]?) in
+    Function("setCharacteristicValue") { (serviceUuid: String, characteristicUuid: String, value: [Int]) in
       // no-op on iOS
     }
 

@@ -53,7 +53,6 @@ export type ConnectionStateChangeEvent = {
 };
 
 export type CharacteristicReadRequestEvent = {
-  requestId: number;
   deviceAddress: string;
   serviceUuid: string;
   characteristicUuid: string;
@@ -61,13 +60,11 @@ export type CharacteristicReadRequestEvent = {
 };
 
 export type CharacteristicWriteRequestEvent = {
-  requestId: number;
   deviceAddress: string;
   serviceUuid: string;
   characteristicUuid: string;
   offset: number;
   value: number[];
-  responseNeeded: boolean;
 };
 
 export type NotificationSentEvent = {
