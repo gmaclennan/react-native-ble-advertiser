@@ -1,0 +1,38 @@
+# Smoke test that requires a real Android device with Bluetooth.
+#
+# In addition to what smoke-test.yaml covers, this verifies:
+#   - BLE advertising starts successfully
+#   - GATT server opens and a service is registered without error
+#
+# Run:
+#   cd example && npx expo run:android --device  # build for device
+#   maestro test .maestro/smoke-test-device.yaml
+appId: app.comapeo.bleadvertiser.example
+---
+- launchApp:
+    clearState: true
+
+- assertVisible: "BLE Advertiser"
+
+- tapOn: "Your name"
+- inputText: "smoke"
+- hideKeyboard
+- tapOn: "Start"
+
+- runFlow:
+    when:
+      visible: "Allow"
+    commands:
+      - tapOn: "Allow"
+
+- assertVisible:
+    text: "Discovery"
+    timeout: 10000
+
+# On a real device, advertising and GATT server should both succeed.
+- assertVisible:
+    text: "Broadcasting"
+    timeout: 10000
+- assertVisible:
+    text: "GATT Server: running"
+    timeout: 10000

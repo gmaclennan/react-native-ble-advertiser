@@ -1,42 +1,41 @@
-# Smoke test: verifies the native module loads, permissions work, and the
-# GATT server starts without crashing.
+# Smoke test that runs on an emulator (no Bluetooth hardware required).
 #
-# Prerequisites:
-#   - Run on a real Android device with Bluetooth (not an emulator).
-#   - Build and install the example app first:
-#       cd example && npx expo run:android
-#   - Then run:
-#       maestro test .maestro/smoke-test.yaml
+# Verifies:
+#   - Native module compiles, links, and loads (app doesn't crash on launch)
+#   - JS/native bridge is wired correctly (isSupported, startAdvertising,
+#     startGattServer are all callable — they return errors, not crashes)
+#   - Permission request flow works
+#   - Discovery screen renders despite BLE being unavailable
+#
+# This catches the most common regressions: linking errors, missing classes,
+# method signature mismatches between JS and native.
+#
+# Run:
+#   cd example && npx expo run:android  # build for emulator
+#   maestro test .maestro/smoke-test.yaml
 appId: app.comapeo.bleadvertiser.example
 ---
 - launchApp:
     clearState: true
 
-# Start screen renders — proves native module loaded
+# Start screen renders — native module loaded without crash
 - assertVisible: "BLE Advertiser"
 
-# Enter a name and proceed
+# Enter a name and navigate to Discovery
 - tapOn: "Your name"
 - inputText: "smoke"
 - hideKeyboard
 - tapOn: "Start"
 
-# Handle the Bluetooth permission dialog.
-# Android 12+ shows a single "Nearby devices" dialog for the grouped
-# BLUETOOTH_ADVERTISE / BLUETOOTH_SCAN / BLUETOOTH_CONNECT permissions.
+# Handle Bluetooth permission dialog (still shown on emulator)
 - runFlow:
     when:
       visible: "Allow"
     commands:
       - tapOn: "Allow"
 
-# Discovery screen loaded — permissions succeeded, advertising + GATT server
-# initialisation ran without crashing.
+# Discovery screen rendered — the native module methods were called
+# (they returned errors, but didn't crash) and the app recovered gracefully.
 - assertVisible:
     text: "Discovery"
-    timeout: 10000
-
-# GATT server started and the service was registered successfully.
-- assertVisible:
-    text: "GATT Server: running"
     timeout: 10000
