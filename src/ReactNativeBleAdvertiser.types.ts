@@ -22,3 +22,62 @@ export type AdvertiseSettings = {
   connectable?: boolean;
   timeout?: number;
 };
+
+// --- GATT Server Types ---
+
+export type CharacteristicProperty =
+  | 'read'
+  | 'write'
+  | 'writeWithoutResponse'
+  | 'notify'
+  | 'indicate';
+
+export type CharacteristicPermission = 'read' | 'write';
+
+export type GattCharacteristic = {
+  uuid: string;
+  properties: CharacteristicProperty[];
+  permissions: CharacteristicPermission[];
+  /** Initial value as byte array. */
+  value?: number[];
+};
+
+export type GattService = {
+  uuid: string;
+  characteristics: GattCharacteristic[];
+};
+
+export type ConnectionStateChangeEvent = {
+  deviceAddress: string;
+  connected: boolean;
+};
+
+export type CharacteristicReadRequestEvent = {
+  requestId: number;
+  deviceAddress: string;
+  serviceUuid: string;
+  characteristicUuid: string;
+  offset: number;
+};
+
+export type CharacteristicWriteRequestEvent = {
+  requestId: number;
+  deviceAddress: string;
+  serviceUuid: string;
+  characteristicUuid: string;
+  offset: number;
+  value: number[];
+  responseNeeded: boolean;
+};
+
+export type NotificationSentEvent = {
+  deviceAddress: string;
+  status: number;
+};
+
+export type GattServerEvents = {
+  onConnectionStateChange: ConnectionStateChangeEvent;
+  onCharacteristicReadRequest: CharacteristicReadRequestEvent;
+  onCharacteristicWriteRequest: CharacteristicWriteRequestEvent;
+  onNotificationSent: NotificationSentEvent;
+};
