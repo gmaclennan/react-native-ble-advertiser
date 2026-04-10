@@ -1,19 +1,24 @@
-import type { StyleProp, ViewStyle } from 'react-native';
+type RequireAtLeastOne<T> = {
+  [K in keyof T]-?: Required<Pick<T, K>> & Partial<Pick<T, Exclude<keyof T, K>>>;
+}[keyof T];
 
-export type OnLoadEventPayload = {
-  url: string;
+type AdvertiseDataFields = {
+  serviceUuids?: string[];
+  includeDeviceName?: boolean;
+  /** Android-only. Ignored on iOS. */
+  manufacturerData?: Array<{ id: number; data: Uint8Array }>;
+  /** Android-only. Ignored on iOS. */
+  serviceData?: Array<{ uuid: string; data: Uint8Array }>;
+  /** Android-only. Ignored on iOS. */
+  includeTxPowerLevel?: boolean;
 };
 
-export type ReactNativeBleAdvertiserModuleEvents = {
-  onChange: (params: ChangeEventPayload) => void;
-};
+export type AdvertiseData = RequireAtLeastOne<AdvertiseDataFields>;
 
-export type ChangeEventPayload = {
-  value: string;
-};
-
-export type ReactNativeBleAdvertiserViewProps = {
-  url: string;
-  onLoad: (event: { nativeEvent: OnLoadEventPayload }) => void;
-  style?: StyleProp<ViewStyle>;
+/** Android-only. Ignored on iOS. */
+export type AdvertiseSettings = {
+  mode?: 'lowPower' | 'balanced' | 'lowLatency';
+  txPowerLevel?: 'ultraLow' | 'low' | 'medium' | 'high';
+  connectable?: boolean;
+  timeout?: number;
 };

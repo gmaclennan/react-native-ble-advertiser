@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "react-native-ble-advertiser-example",
+    "name": "CoMapeo Bluetooth Test",
     "slug": "react-native-ble-advertiser-example",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -27,6 +27,12 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      ["../app.plugin.js"],
+      ["react-native-ble-manager", {
+        "neverForLocation": true
+      }]
+    ]
   }
 }

@@ -1,12 +1,17 @@
 import { NativeModule, requireNativeModule } from 'expo';
 
-import { ReactNativeBleAdvertiserModuleEvents } from './ReactNativeBleAdvertiser.types';
+import type { AdvertiseData, AdvertiseSettings } from './ReactNativeBleAdvertiser.types';
 
-declare class ReactNativeBleAdvertiserModule extends NativeModule<ReactNativeBleAdvertiserModuleEvents> {
-  PI: number;
-  hello(): string;
-  setValueAsync(value: string): Promise<void>;
+declare class ReactNativeBleAdvertiserModule extends NativeModule {
+  isSupported(): boolean;
+  getPermissionsAsync(): Promise<import('expo-modules-core').PermissionResponse>;
+  requestPermissionsAsync(): Promise<import('expo-modules-core').PermissionResponse>;
+  startAdvertising(
+    advertiseData: AdvertiseData,
+    scanResponseData?: AdvertiseData,
+    settings?: AdvertiseSettings
+  ): Promise<void>;
+  stopAdvertising(): void;
 }
 
-// This call loads the native module object from the JSI.
 export default requireNativeModule<ReactNativeBleAdvertiserModule>('ReactNativeBleAdvertiser');
