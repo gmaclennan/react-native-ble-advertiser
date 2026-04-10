@@ -1,17 +1,15 @@
-# Smoke test that runs on an emulator (no Bluetooth hardware required).
+# Smoke test — works on both emulator and real device.
 #
-# Verifies:
-#   - Native module compiles, links, and loads (app doesn't crash on launch)
-#   - JS/native bridge is wired correctly (isSupported, startAdvertising,
-#     startGattServer are all callable — they return errors, not crashes)
-#   - Permission request flow works
-#   - Discovery screen renders despite BLE being unavailable
+# On emulator (no Bluetooth): startAdvertising() rejects, the error is
+# displayed, and the GATT server path is never reached. The test still
+# proves the native module loaded and its methods are callable across
+# the bridge (they return errors, not crashes).
 #
-# This catches the most common regressions: linking errors, missing classes,
-# method signature mismatches between JS and native.
+# On a real device: use smoke-test-device.yaml instead, which also
+# asserts that advertising and the GATT server started successfully.
 #
 # Run:
-#   cd example && npx expo run:android  # build for emulator
+#   cd example && npx expo run:android
 #   maestro test .maestro/smoke-test.yaml
 appId: app.comapeo.bleadvertiser.example
 ---
@@ -27,15 +25,15 @@ appId: app.comapeo.bleadvertiser.example
 - hideKeyboard
 - tapOn: "Start"
 
-# Handle Bluetooth permission dialog (still shown on emulator)
+# Handle Bluetooth permission dialog if shown
 - runFlow:
     when:
       visible: "Allow"
     commands:
       - tapOn: "Allow"
 
-# Discovery screen rendered — the native module methods were called
-# (they returned errors, but didn't crash) and the app recovered gracefully.
+# Discovery screen rendered — init() ran, native methods were called,
+# and the app didn't crash (even if BLE is unavailable).
 - assertVisible:
     text: "Discovery"
     timeout: 10000

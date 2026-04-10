@@ -169,19 +169,13 @@ function DiscoveryScreen({
         if (stopped) return;
 
         const nameBytes = new TextEncoder().encode(name);
+        await startAdvertising(
+          { serviceUuids: [SERVICE_UUID] },
+          { manufacturerData: [{ id: 0xffff, data: nameBytes }] },
+          { mode: "lowPower", connectable: true },
+        );
 
-        // Each BLE operation is independent — one failing shouldn't
-        // prevent the others from being attempted.
-        try {
-          await startAdvertising(
-            { serviceUuids: [SERVICE_UUID] },
-            { manufacturerData: [{ id: 0xffff, data: nameBytes }] },
-            { mode: "lowPower", connectable: true },
-          );
-        } catch (e: any) {
-          if (!stopped) setError(e.message);
-        }
-
+        // Start GATT server so connected centrals can read our name
         try {
           await startGattServer();
           await addService({
@@ -197,36 +191,33 @@ function DiscoveryScreen({
           });
           if (!stopped) setGattStatus("running");
         } catch (e: any) {
-          if (!stopped) setGattStatus("error");
+          if (!stopped) setGattStatus("error: " + e.message);
         }
 
-        try {
-          await BleManager.start();
-          subscription = BleManager.onDiscoverPeripheral((peripheral: any) => {
-            console.log("Discovered peripheral:", peripheral);
-            if (seenIds.current.has(peripheral.id)) return;
+        await BleManager.start();
 
-            const mfgData = peripheral.advertising?.manufacturerData;
-            let deviceName: string;
-            if (mfgData?.bytes) {
-              const bytes = new Uint8Array(mfgData.bytes);
-              deviceName = new TextDecoder().decode(bytes.slice(2));
-            }
-            seenIds.current.add(peripheral.id);
-            setDevices((prev) => [
-              ...prev,
-              {
-                id: peripheral.id,
-                name: deviceName || peripheral.name || "Unknown",
-              },
-            ]);
-          });
-          await BleManager.scan({ serviceUUIDs: [SERVICE_UUID], seconds: 0 });
-        } catch {
-          // Scanning unavailable (e.g. on emulator)
-        }
+        subscription = BleManager.onDiscoverPeripheral((peripheral: any) => {
+          console.log("Discovered peripheral:", peripheral);
+          if (seenIds.current.has(peripheral.id)) return;
 
-        if (!stopped) setStarted(true);
+          const mfgData = peripheral.advertising?.manufacturerData;
+          let deviceName: string;
+          if (mfgData?.bytes) {
+            const bytes = new Uint8Array(mfgData.bytes);
+            deviceName = new TextDecoder().decode(bytes.slice(2));
+          }
+          seenIds.current.add(peripheral.id);
+          setDevices((prev) => [
+            ...prev,
+            {
+              id: peripheral.id,
+              name: deviceName || peripheral.name || "Unknown",
+            },
+          ]);
+        });
+
+        await BleManager.scan({ serviceUUIDs: [SERVICE_UUID], seconds: 0 });
+        setStarted(true);
       } catch (e: any) {
         setError(e.message);
       }
