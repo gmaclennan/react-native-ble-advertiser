@@ -134,6 +134,9 @@ function DiscoveryScreen({
 }) {
   const [devices, setDevices] = useState<DiscoveredDevice[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [advertiseStatus, setAdvertiseStatus] = useState<
+    "starting" | "advertising" | "unsupported" | string
+  >("starting");
   const [started, setStarted] = useState(false);
   const seenIds = useRef(new Set<string>());
 
@@ -143,31 +146,60 @@ function DiscoveryScreen({
 
     async function init() {
       try {
-        const results = await PermissionsAndroid.requestMultiple([
-          PermissionsAndroid.PERMISSIONS.BLUETOOTH_ADVERTISE,
-          PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
-          PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
-        ]);
+        // Request permissions appropriate for the Android version
+        if (Platform.OS === "android") {
+          if (Platform.Version >= 31) {
+            // Android 12+: request new granular Bluetooth permissions
+            const results = await PermissionsAndroid.requestMultiple([
+              PermissionsAndroid.PERMISSIONS.BLUETOOTH_ADVERTISE,
+              PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
+              PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
+            ]);
 
-        const denied = Object.entries(results).filter(
-          ([_, v]) => v !== PermissionsAndroid.RESULTS.GRANTED,
-        );
-        if (denied.length > 0) {
-          setError(
-            "Bluetooth permissions denied: " +
-              denied.map(([k]) => k).join(", "),
-          );
-          return;
+            const denied = Object.entries(results).filter(
+              ([_, v]) => v !== PermissionsAndroid.RESULTS.GRANTED,
+            );
+            if (denied.length > 0) {
+              setError(
+                "Bluetooth permissions denied: " +
+                  denied.map(([k]) => k).join(", "),
+              );
+              return;
+            }
+          } else {
+            // Android 6-11: BLE scanning requires location permission
+            const granted = await PermissionsAndroid.request(
+              PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+            );
+            if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+              setError(
+                "Location permission is required for Bluetooth scanning",
+              );
+              return;
+            }
+          }
         }
 
         if (stopped) return;
 
-        const nameBytes = new TextEncoder().encode(name);
-        await startAdvertising(
-          { serviceUuids: [SERVICE_UUID] },
-          { manufacturerData: [{ id: 0xffff, data: nameBytes }] },
-          { mode: "lowPower", connectable: false },
-        );
+        // Try to start advertising, but don't block scanning if it fails
+        if (isSupported()) {
+          try {
+            const nameBytes = new TextEncoder().encode(name);
+            await startAdvertising(
+              { serviceUuids: [SERVICE_UUID] },
+              { manufacturerData: [{ id: 0xffff, data: nameBytes }] },
+              { mode: "lowPower", connectable: false },
+            );
+            setAdvertiseStatus("advertising");
+          } catch (e: any) {
+            setAdvertiseStatus(`Advertise failed: ${e.message}`);
+          }
+        } else {
+          setAdvertiseStatus("unsupported");
+        }
+
+        if (stopped) return;
 
         await BleManager.start();
 
@@ -224,13 +256,22 @@ function DiscoveryScreen({
         ListHeaderComponent={
           <View style={{ paddingBottom: 8, gap: 4 }}>
             <Text style={{ fontSize: 16 }}>
-              {started ? `Broadcasting as "${name}"` : "Starting..."}
+              {started
+                ? advertiseStatus === "advertising"
+                  ? `Broadcasting as "${name}"`
+                  : "Scanning only (not advertising)"
+                : "Starting..."}
             </Text>
-            {!isSupported() && (
-              <Text style={{ color: "red" }}>
+            {advertiseStatus === "unsupported" && (
+              <Text style={{ color: "#b36b00" }}>
                 BLE advertising not supported on this device
               </Text>
             )}
+            {advertiseStatus !== "starting" &&
+              advertiseStatus !== "advertising" &&
+              advertiseStatus !== "unsupported" && (
+                <Text style={{ color: "#b36b00" }}>{advertiseStatus}</Text>
+              )}
             {error && <Text style={{ color: "red" }}>{error}</Text>}
             {started && devices.length === 0 && (
               <Text style={{ color: "#999", fontStyle: "italic" }}>
