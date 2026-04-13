@@ -23,7 +23,8 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "app.comapeo.bleadvertiser.example"
+      "package": "app.comapeo.bleadvertiser.example",
+      "permissions": ["android.permission.ACCESS_FINE_LOCATION"]
     },
     "web": {
       "favicon": "./assets/favicon.png"
